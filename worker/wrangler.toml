@@ -1,0 +1,20 @@
+name = "codelabs-uploader"
+main = "index.js"
+compatibility_date = "2024-01-01"
+
+# Environment variables (set these using wrangler secret or dashboard)
+# Don't commit secrets to git!
+# 
+# Required secrets:
+# - GITHUB_TOKEN: Personal access token with repo scope
+# - GITHUB_OWNER: GitHub username or organization
+# - GITHUB_REPO: Repository name
+# - GITHUB_DEFAULT_BRANCH: Default branch (e.g., "main")
+# - CLOUDFLARE_PAGES_PROJECT: Cloudflare Pages project name
+
+[vars]
+# Non-sensitive variables can go here
+# GITHUB_OWNER = "yourusername"
+# GITHUB_REPO = "codelabs"
+# GITHUB_DEFAULT_BRANCH = "main"
+# CLOUDFLARE_PAGES_PROJECT = "codelabs"
