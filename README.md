@@ -115,13 +115,19 @@ cd ..
 node build-index.js . codelabs.json
 ```
 
-## Upload Feature (GitHub + Cloudflare Pages Workflow)
+## Upload Feature (Hybrid Workflow)
 
 The catalog includes a "+ Add Codelab" button that lets users upload markdown files, which automatically:
 1. Creates a new branch in your GitHub repository
 2. Commits the file to `codelabs/<filename>.md`
 3. Opens a pull request for review
-4. Generates a Cloudflare Pages preview deployment
+4. **Cloudflare Pages builds preview** (for review)
+5. After merge: **GitHub Actions deploys to production** (GitHub Pages)
+
+**Architecture:**
+- **Previews:** Cloudflare Pages (instant PR previews)
+- **Production:** GitHub Pages (stable, version-controlled)
+- **Upload API:** Cloudflare Pages Functions (`/api/upload`)
 
 ### Setup Steps
 
@@ -139,74 +145,87 @@ git branch -M main
 git push -u origin main
 ```
 
-#### 2. Set Up Cloudflare Pages
+#### 2. Set Up Cloudflare Pages (for previews)
 
 1. Log into [Cloudflare Dashboard](https://dash.cloudflare.com)
 2. Go to **Workers & Pages** → **Create application** → **Pages** → **Connect to Git**
 3. Select your GitHub repository
 4. Configure build settings:
-   - **Build command**: `node build-index.js . codelabs.json`
+   - **Build command**: `bash build.sh`
    - **Build output directory**: `/` (root)
    - **Root directory**: `/` (root)
-5. Enable **Preview deployments** for pull requests
+5. Set **Environment variables** (in Settings → Environment variables):
+   ```
+   GITHUB_TOKEN=<your-github-token>
+   GITHUB_OWNER=<your-username>
+   GITHUB_REPO=<your-repo-name>
+   GITHUB_DEFAULT_BRANCH=main
+   CLOUDFLARE_PAGES_PROJECT=<your-pages-project-name>
+   ```
+6. Enable **Preview deployments** for pull requests
+7. **Important:** This is ONLY for PR previews, not production
 
-#### 3. Deploy Cloudflare Worker
+#### 3. Enable GitHub Pages (for production)
 
-```bash
-cd worker
-npm install
+1. Go to your GitHub repository → **Settings** → **Pages**
+2. **Source:** Deploy from a branch
+3. **Branch:** `gh-pages` / `root`
+4. Click **Save**
+5. Your production site will be at: `https://<username>.github.io/<repo>`
 
-# Set environment variables (secrets)
-wrangler secret put GITHUB_TOKEN
-# Enter your GitHub Personal Access Token (with 'repo' scope)
-
-wrangler secret put GITHUB_OWNER
-# Enter your GitHub username or organization
-
-wrangler secret put GITHUB_REPO
-# Enter your repository name
-
-wrangler secret put GITHUB_DEFAULT_BRANCH
-# Enter: main
-
-wrangler secret put CLOUDFLARE_PAGES_PROJECT
-# Enter your Cloudflare Pages project name
-
-# Deploy the worker
-npm run deploy
-```
+**Note:** The GitHub Actions workflow will automatically create the `gh-pages` branch on first merge to main.
 
 **Get GitHub Personal Access Token:**
-1. Go to https://github.com/settings/tokens
+1. Go to <https://github.com/settings/tokens>
 2. Click "Generate new token (classic)"
 3. Select scope: `repo` (full control of private repositories)
-4. Copy the token and use it for `GITHUB_TOKEN`
+4. Copy the token and use it for Cloudflare Pages environment variables
 
-#### 4. Update Worker URL
+#### 4. Test the Upload Feature
 
-After deploying the worker, update the URL in `app.js` around line 535:
+The upload API is now at `/api/upload` (same domain as your site):
+- **Preview site:** `https://<project>.pages.dev/api/upload`
+- **Production site:** `https://<username>.github.io/<repo>/api/upload`
 
-```javascript
-// Replace with your deployed Worker URL
-this.workerUrl = 'https://codelabs-uploader.YOUR_SUBDOMAIN.workers.dev/upload';
-```
-
-#### 5. Enable Preview Deployments
-
-In your Cloudflare Pages settings:
-- Go to **Settings** → **Builds & deployments**
-- Enable **Preview deployments** for pull requests
-- Preview URLs will be: `https://<branch-name>.<project>.pages.dev`
+No configuration needed in `app.js` - it automatically uses `/api/upload`!
 
 ### How It Works
 
+**Upload to PR:**
 1. **User uploads** a markdown file through the web UI
 2. **Worker receives** the file and creates a new branch (e.g., `codelab/1234567890-tutorial-name`)
-3. **File is committed** to `codelabs/<filename>.md`
-4. **Pull request is opened** automatically
-5. **Cloudflare Pages builds** a preview deployment from the PR branch
-6. **You review** the preview and approve/merge the PR
-7. **Production site rebuilds** automatically with the new codelab
+3. **File is committed** to `codelabs/<filename>.md` in the new branch
+4. **Pull request is opened** automatically against main branch
+
+**Build Process (runs on every PR and merge):**
+5. **Cloudflare Pages triggers build** when PR is created/updated
+6. **Build script (`build.sh`) runs:**
+   - Downloads `claat` binary (Google's Codelab tool)
+   - Converts all `.md` files in `codelabs/` → HTML directories
+   - Generates `codelabs.json` catalog index
+7. **Preview deployment created** at `https://<branch-name>.<project>.pages.dev`
+
+**Review and Merge:**
+8. **You review** the preview URL to see how the codelab looks
+9. **Approve and merge** the PR if it looks good
+10. **Production site rebuilds** automatically with the new codelab
+
+**File Structure After Build:**
+```text
+Source Files (in repo):
+  codelabs/tutorial.md        ← Uploaded markdown
+  functions/api/upload.js     ← Upload API (Pages Function)
+  
+Built Output (generated by build.sh or GitHub Actions):
+  tutorial/index.html         ← Individual codelab page
+  tutorial/codelab.json       ← Codelab metadata
+  codelabs.json               ← Catalog index
+  index.html                  ← Catalog homepage
+```
+
+**URLs:**
+- Cloudflare Preview: `https://codelab-123-tutorial.pages.dev`
+- GitHub Pages Production: `https://<username>.github.io/<repo>`
 
 ### Security Notes
 
