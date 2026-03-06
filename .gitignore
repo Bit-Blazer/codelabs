@@ -1,0 +1,13 @@
+# Node modules if using npm scripts
+node_modules/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# wrangler files
+.wrangler
+.dev.vars*
+!.dev.vars.example
+.env*
+!.env.example

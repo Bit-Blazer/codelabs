@@ -1,0 +1,23 @@
+[
+  {
+    "id": "regex-complete-crash-course",
+    "title": "Regular Expressions: Complete Crash Course",
+    "summary": "A comprehensive 20-minute crash course covering all essential regex concepts",
+    "categories": [
+      "regex",
+      "programming",
+      "tutorial"
+    ],
+    "tags": [
+      "web"
+    ],
+    "duration": 18,
+    "updated": "2026-03-06T07:34:14Z",
+    "authors": [
+      "Kamil Hassan"
+    ],
+    "status": "Published",
+    "url": "regex-complete-crash-course/index.html",
+    "source": "codelabs/regex-complete-guide.md"
+  }
+]
