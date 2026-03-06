@@ -534,8 +534,8 @@ class CodelabUploadManager {
         this.uploadStatus = document.getElementById('upload-status');
         this.selectedFile = null;
         
-        // Pages Function endpoint (same domain as your site)
-        this.apiUrl = '/api/upload';
+        // Cloudflare Worker endpoint
+        this.apiUrl = 'https://codelabs-uploader.kamilhassan04.workers.dev/upload';
         
         this.setupEventListeners();
     }
