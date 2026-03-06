@@ -1,9 +1,9 @@
-name: Deploy Catalog Site
+name: Deploy to GitHub Pages
 
 on:
   push:
-    tags:
-      - "v*"
+    branches:
+      - main
   workflow_dispatch:
 
 permissions:
@@ -18,57 +18,50 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Set up Go
-        uses: actions/setup-go@v6.1.0
-        with:
-          go-version: "1.25"
-
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
           node-version: "latest"
 
-      - name: Build CLaaT
-        working-directory: claat
+      - name: Download CLaaT binary
         run: |
-          go build -o ../claat-bin ./main.go
-          chmod +x ../claat-bin
+          echo "Downloading claat from https://github.com/Bit-Blazer/codelab-tools..."
+          wget -q https://github.com/Bit-Blazer/codelab-tools/releases/latest/download/claat-linux-amd64 -O claat
+          chmod +x claat
+          ./claat version || echo "claat ready"
 
-      - name: Prepare temp folder
+      - name: Create codelabs directory if missing
         run: |
-          mkdir -p temp
+          mkdir -p codelabs
 
-          # Copy source markdown files
-          cp -r sample-codelabs temp/codelabs
-
-          # Copy catalog files to root
-          cp -r catalog/* temp/
-
-      - name: Export codelabs
-        working-directory: temp
+      - name: Export codelabs (MD → HTML)
         run: |
-          # Export all markdown files to temp root
+          echo "Exporting markdown files to HTML codelabs..."
           for file in codelabs/*.md; do
             if [ -f "$file" ]; then
-              echo "Exporting $file..."
-              ../claat-bin export -o . "$file"
+              echo "  → Exporting $(basename "$file")..."
+              ./claat export -o . "$file"
+            else
+              echo "No markdown files found in codelabs/"
             fi
           done
 
+          echo ""
           echo "Exported codelabs:"
-          ls -la
+          ls -d */ 2>/dev/null | grep -v -E "^(codelabs|functions|worker|.git|.github)/" || echo "  (none yet)"
 
-      - name: Build index
-        working-directory: temp
+      - name: Build catalog index
         run: |
+          echo "Building catalog index..."
           node build-index.js . codelabs.json
-          echo "Catalog index:"
-          cat codelabs.json
+          echo ""
+          echo "Catalog contains $(jq '. | length' codelabs.json) codelabs"
 
-      - name: Deploy to gh-pages branch
+      - name: Deploy to gh-pages
         uses: peaceiris/actions-gh-pages@v3
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
-          publish_dir: ./temp
+          publish_dir: .
           publish_branch: gh-pages
           force_orphan: true
+          exclude_assets: '.github,worker,functions,codelabs,build.sh,build.bat,*.md'

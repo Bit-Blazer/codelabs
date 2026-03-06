@@ -534,8 +534,8 @@ class CodelabUploadManager {
         this.uploadStatus = document.getElementById('upload-status');
         this.selectedFile = null;
         
-        // Replace with your Cloudflare Worker URL
-        this.workerUrl = 'https://YOUR_WORKER.YOUR_SUBDOMAIN.workers.dev/upload';
+        // Pages Function endpoint (same domain as your site)
+        this.apiUrl = '/api/upload';
         
         this.setupEventListeners();
     }
@@ -644,7 +644,7 @@ class CodelabUploadManager {
         try {
             const content = await this.readFileAsText(this.selectedFile);
             
-            const response = await fetch(this.workerUrl, {
+            const response = await fetch(this.apiUrl, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json'
